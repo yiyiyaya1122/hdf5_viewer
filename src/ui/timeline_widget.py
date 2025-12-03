@@ -6,6 +6,10 @@ from typing import Dict, List, Tuple, Optional, Set, Any
 import random
 import hashlib
 
+# Matplotlib for score plotting
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+
 
 class TimelineSegment:
     """表示时间轴上的一个段"""
@@ -308,6 +312,12 @@ class TimelineBar(QWidget):
         
         # 重绘
         self.update()
+
+        # 更新score垂直指示线位置（如果已绘制）
+        try:
+            self.update_score_vline()
+        except Exception:
+            pass
         
         # 只有在帧实际变化时才发出信号
         if prev_frame != self.current_frame:
@@ -1209,6 +1219,34 @@ class TimelineWidget(QWidget):
         self.layout.setContentsMargins(5, 5, 5, 5) # 减少边距
         self.layout.setSpacing(5) # 减少间距
         
+        # 添加得分曲线画布（显示在进度条上方）
+        # 增加初始 figure 宽度并略微增高，以便线条显示更醒目
+        self.score_canvas = FigureCanvas(Figure(figsize=(8, 1.0)))
+        # 让画布横向扩展，与进度条同宽；高度固定为较短的条
+        self.score_canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.score_canvas.setFixedHeight(110)
+        self.score_ax = self.score_canvas.figure.subplots()
+        # 简化坐标轴样式
+        self.score_ax.set_facecolor((1, 1, 1, 0))
+        # 给子图增加底部边距，防止 x 轴标签被裁切；左右略微收紧以便利用空间
+        try:
+            # 增加底部边距，避免 x 轴标签被裁切
+            self.score_canvas.figure.subplots_adjust(bottom=0.25, left=0.07, right=0.98, top=0.95)
+        except Exception:
+            pass
+        # x 轴与总帧数对齐（0..total_frames-1）
+        self.score_ax.set_xlim(0, max(0, self.total_frames - 1))
+        self.score_ax.set_ylim(0, 1)
+        self.score_ax.tick_params(axis='both', which='both', length=0)
+        self.score_ax.set_yticks([])
+        self.score_ax.set_xticks([])
+        self.score_line = None
+        self.score_vline = None
+        self.score_frames = []
+        self.score_values = []
+        # 将画布添加到主布局（在控制条之上）
+        self.layout.addWidget(self.score_canvas)
+        
         # 创建控制布局
         control_layout = QHBoxLayout()
         control_layout.setSpacing(8) # 减少控件间距
@@ -1361,6 +1399,14 @@ class TimelineWidget(QWidget):
             timeline.set_total_frames(self.total_frames)
             
         self.update_frame_label()
+        # 保证得分图的 x 轴与总帧数对齐
+        try:
+            if getattr(self, 'score_ax', None) is not None:
+                self.score_ax.set_xlim(0, max(0, self.total_frames - 1))
+                if getattr(self, 'score_canvas', None) is not None:
+                    self.score_canvas.draw_idle()
+        except Exception:
+            pass
     
     def set_current_frame(self, frame: int):
         """设置当前帧"""
@@ -1386,6 +1432,12 @@ class TimelineWidget(QWidget):
         
         # 重绘
         self.update()
+
+        # 更新score垂直指示线位置（如果已绘制）
+        try:
+            self.update_score_vline()
+        except Exception:
+            pass
         
         # 只有在帧实际变化时才发出信号
         if prev_frame != self.current_frame:
@@ -1827,6 +1879,112 @@ class TimelineWidget(QWidget):
     def set_frame_count(self, frames: int):
         """设置总帧数（兼容接口）"""
         self.set_total_frames(frames)
+
+    def plot_scores(self, frame_scores: Dict[int, float]):
+        """绘制每帧得分曲线。frame_scores 为 {frame: score} 映射。"""
+        try:
+            # 将字典转换为排序的数组
+            items = sorted(frame_scores.items())
+            if not items:
+                # 清除现有图
+                self.score_frames = []
+                self.score_values = []
+                self.score_ax.clear()
+                self.score_canvas.draw_idle()
+                return
+
+            frames, values = zip(*items)
+            self.score_frames = list(frames)
+            self.score_values = list(values)
+
+            # 更新坐标轴范围
+            self.score_ax.clear()
+            # 绘制更粗的折线以提高可见性，并稍微增强填充透明度
+            self.score_ax.plot(self.score_frames, self.score_values, color='#2a82da', linewidth=2.2)
+            self.score_ax.fill_between(self.score_frames, self.score_values, color='#2a82da', alpha=0.18)
+            # 保证 x 轴与时间轴宽度一致
+            self.score_ax.set_xlim(0, max(0, self.total_frames - 1))
+            # 自动计算y范围但限制在0-1若多数数据在0-1
+            ymin = min(self.score_values)
+            ymax = max(self.score_values)
+            if ymin >= 0 and ymax <= 1:
+                self.score_ax.set_ylim(0, 1)
+            else:
+                self.score_ax.set_ylim(min(0, ymin), max(1, ymax))
+
+            # 设置刻度和标签（保持紧凑）
+            # X 轴刻度：最多显示 6 个均匀分布的刻度
+            try:
+                # 使用 MaxNLocator 限制 x 轴主刻度数量，优雅应对大帧数
+                from matplotlib.ticker import MaxNLocator
+                locator = MaxNLocator(nbins=5, integer=True)
+                self.score_ax.xaxis.set_major_locator(locator)
+                xticks = self.score_ax.get_xticks()
+                # 使用默认字体大小显示刻度标签（取消强制缩小和旋转）
+                self.score_ax.set_xticklabels([str(int(x)) for x in xticks], fontsize=6)
+                # 让 Figure 自动调整布局以容纳标签
+                try:
+                    self.score_canvas.figure.tight_layout()
+                except Exception:
+                    pass
+            except Exception:
+                # 回退：使用稀疏的手动刻度
+                try:
+                    import numpy as _np
+                    xtick_count = min(4, max(2, int(self.total_frames)))
+                    xticks = _np.linspace(0, max(0, self.total_frames - 1), num=xtick_count, dtype=int)
+                    self.score_ax.set_xticks(xticks.tolist())
+                    # 取消对 x 轴刻度字体大小和旋转的强制设置，使用默认显示
+                    self.score_ax.set_xticklabels([str(int(x)) for x in xticks], fontsize=6)
+                except Exception:
+                    self.score_ax.set_xticks([])
+
+            # Y 轴刻度：如果分数在 [0,1] 内，使用固定刻度；否则使用三个刻度（min, mid, max）
+            try:
+                if ymin >= 0 and ymax <= 1:
+                    yticks = [0.0, 0.25, 0.5, 0.75, 1.0]
+                else:
+                    mid = (ymin + ymax) / 2.0
+                    yticks = [ymin, mid, ymax]
+                self.score_ax.set_yticks(yticks)
+                self.score_ax.set_yticklabels([f"{y:.2f}" for y in yticks], fontsize=6)
+            except Exception:
+                self.score_ax.set_yticks([])
+
+            # 添加轴标签（小字体，节省空间）
+            try:
+                self.score_ax.set_xlabel('Frame', fontsize=8)
+                self.score_ax.set_ylabel('Score', fontsize=8)
+            except Exception:
+                pass
+
+            # 添加当前帧垂直线
+            # 添加/更新当前帧的红色垂直线
+            if self.score_vline is not None:
+                try:
+                    self.score_vline.remove()
+                except Exception:
+                    pass
+            self.score_vline = self.score_ax.axvline(self.current_frame, color='r', linewidth=1)
+
+            self.score_canvas.draw_idle()
+        except Exception as e:
+            print(f"plot_scores error: {e}")
+
+    def update_score_vline(self):
+        """更新垂直指示线到当前帧位置"""
+        if not hasattr(self, 'score_ax') or self.score_ax is None:
+            return
+        if getattr(self, 'score_vline', None) is None:
+            return
+        try:
+            # vline is a Line2D; set_xdata for vertical line needs updating of segments
+            # remove and redraw for simplicity
+            self.score_vline.remove()
+            self.score_vline = self.score_ax.axvline(self.current_frame, color='r', linewidth=1)
+            self.score_canvas.draw_idle()
+        except Exception:
+            pass
     
     def reset_segments(self, keys_to_preserve=None):
         """

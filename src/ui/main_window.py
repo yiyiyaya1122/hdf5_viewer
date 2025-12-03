@@ -86,6 +86,11 @@ class MainWindow(QMainWindow):
         # 当前文件路径
         self.current_file_path = None
 
+        # 每帧分数映射 (从 data/<basename>.json 加载)
+        self.frame_scores = {}
+        self.scores_loaded = False
+        self.scores_source = None
+
         # 初始化短语库
         self.phrase_library = PhraseLibrary()
         self.selected_window_index = None  # 当前选中的时间窗口索引
@@ -610,7 +615,21 @@ class MainWindow(QMainWindow):
             print("初始化时间轴")
 
             # 默认显示所有图像
+            # 尝试加载与该HDF5同名的JSON分数文件（优先 repo/data）
+            try:
+                self.load_frame_scores_for_current_file()
+            except Exception:
+                # 加载失败不要中断流程
+                pass
+
             self.display_all_images()
+
+            # 确保状态栏显示当前帧与分数
+            try:
+                current_frame = self.timeline_widget.get_current_frame()
+                self.on_frame_changed(current_frame)
+            except Exception:
+                pass
 
             # 注意：不再自动加载标注数据，需要用户手动选择字段后加载
             print("HDF5文件加载完成，请选择需要标注的字段")
@@ -798,7 +817,118 @@ class MainWindow(QMainWindow):
         label.setPixmap(scaled_pixmap)
         label.setText("")  # 清除文本
         label.setStyleSheet(label.styleSheet().replace("color: #999;", ""))  # 移除文本颜色
+
+        # 在图像上方添加分数覆盖（如果已加载）
+        try:
+            current_frame = self.timeline_widget.get_current_frame() if hasattr(self, 'timeline_widget') else None
+            if getattr(self, 'scores_loaded', False) and current_frame is not None:
+                sc = self.frame_scores.get(current_frame, None)
+                overlay = label.findChild(QLabel, 'score_overlay')
+                if overlay is None:
+                    overlay = QLabel(label)
+                    overlay.setObjectName('score_overlay')
+                    overlay.setAttribute(Qt.WA_TransparentForMouseEvents)
+                    overlay.setStyleSheet(
+                        'background-color: rgba(0, 0, 0, 0.55); color: white; padding: 4px 6px; border-radius: 4px; font-weight: bold;'
+                    )
+
+                # 设置文本并显示/隐藏
+                if sc is None:
+                    overlay.setText('N/A')
+                else:
+                    try:
+                        overlay.setText(f"{float(sc):.2f}")
+                    except Exception:
+                        overlay.setText(str(sc))
+
+                overlay.adjustSize()
+                # 将overlay放在标签的右上角（留一点边距）
+                margin = 6
+                lx = max(0, label.width() - overlay.width() - margin)
+                ly = margin
+                overlay.move(lx, ly)
+                overlay.show()
+                overlay.raise_()
+            else:
+                # 如果没有加载分数，隐藏任何已有overlay
+                overlay = label.findChild(QLabel, 'score_overlay')
+                if overlay is not None:
+                    overlay.hide()
+        except Exception as e:
+            # 不要因为overlay失败而中断主流程
+            # print(f"score overlay error: {e}")
+            pass
     
+    def load_frame_scores_for_current_file(self):
+        """尝试从 repository 的 `data/` 目录或 HDF5 同目录加载与当前 HDF5 同名的 JSON 文件，解析其中的 `score` 字段为 frame->score 映射。"""
+        # 重置
+        self.frame_scores = {}
+        self.scores_loaded = False
+        self.scores_source = None
+
+        if not self.current_file_path:
+            return False
+
+        import json
+
+        # 优先查找 repo 根下的 data/ 目录
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+        data_dir = os.path.join(project_root, 'data')
+        base = os.path.splitext(os.path.basename(self.current_file_path))[0]
+
+        candidates = [
+            os.path.join(data_dir, base + '.json'),
+            os.path.join(os.path.dirname(self.current_file_path), base + '.json')
+        ]
+
+        for p in candidates:
+            if os.path.exists(p):
+                try:
+                    with open(p, 'r', encoding='utf-8') as f:
+                        doc = json.load(f)
+
+                    scores = doc.get('score') if isinstance(doc, dict) else None
+
+                    # 兼容不同格式
+                    if not scores:
+                        # 尝试其他常见键
+                        scores = doc.get('scores') or doc.get('score_list')
+
+                    if isinstance(scores, list):
+                        for entry in scores:
+                            if isinstance(entry, dict):
+                                for k, v in entry.items():
+                                    try:
+                                        idx = int(k)
+                                        self.frame_scores[idx] = v
+                                    except Exception:
+                                        continue
+                    elif isinstance(scores, dict):
+                        for k, v in scores.items():
+                            try:
+                                idx = int(k)
+                                self.frame_scores[idx] = v
+                            except Exception:
+                                continue
+
+                    self.scores_loaded = True
+                    self.scores_source = p
+                    print(f"已加载帧分数: {len(self.frame_scores)} 条, 来自: {p}")
+                    # 将分数数据传递给时间轴用于绘图
+                    try:
+                        if hasattr(self, 'timeline_widget') and self.timeline_widget:
+                            self.timeline_widget.plot_scores(self.frame_scores)
+                    except Exception:
+                        pass
+                    return True
+
+                except Exception as e:
+                    print(f"加载JSON分数失败 ({p}): {e}")
+                    continue
+
+        print("未找到匹配的 JSON 分数文件或加载失败")
+        return False
+
     def update_ui_with_model(self):
         """使用模型数据更新UI"""
         if not self.hdf5_model:
