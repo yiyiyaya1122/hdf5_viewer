@@ -1,0 +1,28 @@
+actions:
+  叠衣服:
+    - 折叠袖子: fold sleeves.
+    - 三折: fold clothes into thirds.
+    - 放置: place folded clothes at top right.
+
+  随机叠衣服:
+    - 拿过来: grab clothes.
+    - 甩: lift clothes up and shake.
+    - 旋转: rotate clothes.
+    - 拉平褶皱: spread clothes flat.
+    - 折叠袖子: fold sleeves.
+    - 三折: fold clothes into thirds.
+    - 放置: place folded clothes at top right.
+
+  叠裤子:
+    - 折叠(1/2): fold pants in half.
+    - 折叠(1/4): fold pants again to 1/4 size.
+    - 放置: place folded pants at top right.
+
+  随机叠裤子:
+    - 拿过来: grab pants.
+    - 甩: lift pants up and shake.
+    - 旋转: rotate pants.
+    - 拉平褶皱: spread pants flat.
+    - 折叠(1/2): fold pants in half.
+    - 折叠(1/4): fold pants again to 1/4 size.
+    - 放置: place folded pants at top right.
