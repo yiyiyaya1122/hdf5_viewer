@@ -174,7 +174,9 @@ class TimelineSegment:
             try:
                 phrase_mapping = get_phrase_mapping()  # 使用全局单例
                 if phrase_mapping:
-                    chinese_text = phrase_mapping.get_chinese_translation(self.subtask)
+                    chinese_text = phrase_mapping.get_chinese_translation(
+                        self.subtask, log_match=False
+                    )
                     if chinese_text:
                         return chinese_text
                     else:

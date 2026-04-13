@@ -1315,18 +1315,28 @@ class MainWindow(QMainWindow):
                 if languages:
                     from src.core.phrase_library import PhraseMapping
                     phrase_mapping = PhraseMapping()
+                    phrase_mapping.begin_translation_match_table_log()
 
-                    # 将标注数据转换为时间窗口
-                    for (start, end), english_text in languages.items():
-                        # 尝试将英文转换回中文显示
-                        chinese_text = phrase_mapping.get_chinese_translation(english_text)
-                        display_text = chinese_text if chinese_text else english_text
+                    try:
+                        # 将标注数据转换为时间窗口
+                        for (start, end), english_text in languages.items():
+                            # 尝试将英文转换回中文显示
+                            chinese_text = phrase_mapping.get_chinese_translation(
+                                english_text
+                            )
+                            display_text = chinese_text if chinese_text else english_text
 
-                        # 添加到时间窗口列表
-                        self.timeline_widget.time_windows.append([start, end, display_text])
+                            # 添加到时间窗口列表
+                            self.timeline_widget.time_windows.append(
+                                [start, end, display_text]
+                            )
 
-                        # 创建时间轴段
-                        self.timeline_widget.create_window_segment([start, end, display_text])
+                            # 创建时间轴段
+                            self.timeline_widget.create_window_segment(
+                                [start, end, display_text]
+                            )
+                    finally:
+                        phrase_mapping.finalize_translation_match_table_log()
 
                     print(f"从HDF5文件加载了字段 '{field_name}' 的 {len(languages)} 个标注")
                 else:
@@ -1833,15 +1843,25 @@ class MainWindow(QMainWindow):
                     QMessageBox.warning(self, "格式错误", "JSON文件中没有找到有效的标注数据")
                     return False
 
-                # 加载时间窗口
-                for annotation in annotations_data:
-                    window = [
-                        annotation["start_frame"],
-                        annotation["end_frame"],
-                        annotation.get("description", "")
-                    ]
-                    self.timeline_widget.time_windows.append(window)
-                    self.timeline_widget.create_window_segment(window)
+                from src.core.phrase_library import PhraseMapping
+
+                phrase_mapping = PhraseMapping()
+                phrase_mapping.begin_translation_match_table_log()
+                try:
+                    for annotation in annotations_data:
+                        desc = annotation.get("description", "")
+                        desc = "" if desc is None else str(desc)
+                        chinese_text = phrase_mapping.get_chinese_translation(desc)
+                        display_text = chinese_text if chinese_text else desc
+                        window = [
+                            annotation["start_frame"],
+                            annotation["end_frame"],
+                            display_text,
+                        ]
+                        self.timeline_widget.time_windows.append(window)
+                        self.timeline_widget.create_window_segment(window)
+                finally:
+                    phrase_mapping.finalize_translation_match_table_log()
 
                 # 如果加载了字段信息，更新当前字段状态
                 if loaded_field and self.hdf5_model:
@@ -1975,34 +1995,44 @@ class MainWindow(QMainWindow):
                 print("JSON文件中没有找到有效的标注数据")
                 return False
 
-            # 加载时间窗口，直接使用原始英文标注
-            for annotation in annotations_data:
-                # 处理description字段，可能是字符串或列表
-                description = annotation.get("description", "")
-                if isinstance(description, list):
-                    # 如果是列表，尝试提取非空值
-                    if description and any(item is not None for item in description):
-                        # 找到第一个非空值
-                        for item in description:
-                            if item is not None:
-                                description = str(item)
-                                break
-                        else:
-                            description = "未标注"  # 如果所有值都是None
-                    else:
-                        description = "未标注"
-                elif description is None:
-                    description = "未标注"
-                else:
-                    description = str(description)
+            from src.core.phrase_library import PhraseMapping
 
-                window = [
-                    annotation["start_frame"],
-                    annotation["end_frame"],
-                    description  # 处理后的描述
-                ]
-                self.timeline_widget.time_windows.append(window)
-                self.timeline_widget.create_window_segment(window)
+            phrase_mapping = PhraseMapping()
+            phrase_mapping.begin_translation_match_table_log()
+            try:
+                # 加载时间窗口：英译中并打印对照表（与 HDF5 字段加载一致）
+                for annotation in annotations_data:
+                    # 处理description字段，可能是字符串或列表
+                    description = annotation.get("description", "")
+                    if isinstance(description, list):
+                        # 如果是列表，尝试提取非空值
+                        if description and any(item is not None for item in description):
+                            # 找到第一个非空值
+                            for item in description:
+                                if item is not None:
+                                    description = str(item)
+                                    break
+                            else:
+                                description = "未标注"  # 如果所有值都是None
+                        else:
+                            description = "未标注"
+                    elif description is None:
+                        description = "未标注"
+                    else:
+                        description = str(description)
+
+                    chinese_text = phrase_mapping.get_chinese_translation(description)
+                    display_text = chinese_text if chinese_text else description
+
+                    window = [
+                        annotation["start_frame"],
+                        annotation["end_frame"],
+                        display_text,
+                    ]
+                    self.timeline_widget.time_windows.append(window)
+                    self.timeline_widget.create_window_segment(window)
+            finally:
+                phrase_mapping.finalize_translation_match_table_log()
 
             # 如果加载了字段信息，更新当前字段状态
             if loaded_field and self.hdf5_model:
@@ -2084,38 +2114,51 @@ class MainWindow(QMainWindow):
                 print("标注数据为空")
                 return False
 
-            # 加载时间窗口，直接使用原始英文标注
-            for annotation in annotations_data:
-                if not all(key in annotation for key in ["start_frame", "end_frame", "description"]):
-                    print(f"跳过格式不完整的标注: {annotation}")
-                    continue
+            from src.core.phrase_library import PhraseMapping
 
-                # 处理description字段，可能是字符串或列表
-                description = annotation["description"]
-                if isinstance(description, list):
-                    # 如果是列表，尝试提取非空值
-                    if description and any(item is not None for item in description):
-                        # 找到第一个非空值
-                        for item in description:
-                            if item is not None:
-                                description = str(item)
-                                break
+            phrase_mapping = PhraseMapping()
+            phrase_mapping.begin_translation_match_table_log()
+            try:
+                # 加载时间窗口：英译中并打印对照表（与 HDF5 字段加载一致）
+                for annotation in annotations_data:
+                    if not all(
+                        key in annotation
+                        for key in ["start_frame", "end_frame", "description"]
+                    ):
+                        print(f"跳过格式不完整的标注: {annotation}")
+                        continue
+
+                    # 处理description字段，可能是字符串或列表
+                    description = annotation["description"]
+                    if isinstance(description, list):
+                        # 如果是列表，尝试提取非空值
+                        if description and any(item is not None for item in description):
+                            # 找到第一个非空值
+                            for item in description:
+                                if item is not None:
+                                    description = str(item)
+                                    break
+                            else:
+                                description = "未标注"  # 如果所有值都是None
                         else:
-                            description = "未标注"  # 如果所有值都是None
-                    else:
+                            description = "未标注"
+                    elif description is None:
                         description = "未标注"
-                elif description is None:
-                    description = "未标注"
-                else:
-                    description = str(description)
+                    else:
+                        description = str(description)
 
-                window = [
-                    annotation["start_frame"],
-                    annotation["end_frame"],
-                    description  # 处理后的描述
-                ]
-                self.timeline_widget.time_windows.append(window)
-                self.timeline_widget.create_window_segment(window)
+                    chinese_text = phrase_mapping.get_chinese_translation(description)
+                    display_text = chinese_text if chinese_text else description
+
+                    window = [
+                        annotation["start_frame"],
+                        annotation["end_frame"],
+                        display_text,
+                    ]
+                    self.timeline_widget.time_windows.append(window)
+                    self.timeline_widget.create_window_segment(window)
+            finally:
+                phrase_mapping.finalize_translation_match_table_log()
 
             # 设置当前标注字段
             if annotation_field and self.hdf5_model:

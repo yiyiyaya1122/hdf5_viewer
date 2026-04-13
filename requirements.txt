@@ -13,3 +13,6 @@ PyQt5==5.15.11
 python-dateutil==2.9.0.post0
 PyYAML==6.0.2
 six==1.17.0
+
+# PhraseMapping 语义兜底（需 all-MiniLM-L6-v2 或 PHRASE_SEMANTIC_MODEL_PATH）；本地 conda env hdf5_viewer 当前为 5.4.0
+sentence-transformers==5.4.0
