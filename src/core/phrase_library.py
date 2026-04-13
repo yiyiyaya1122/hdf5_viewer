@@ -2,7 +2,7 @@
 import sys
 import yaml
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 def get_resource_path(relative_path):
     try:
@@ -52,7 +52,11 @@ class PhraseMapping:
                                         paraphrases = value.get('paraphrases', [])
                                         category_mappings[chinese] = english
                                         category_paraphrases[chinese] = paraphrases
-                                        self.reverse_mappings[english] = chinese
+                                        if english:
+                                            self.reverse_mappings[english] = chinese
+                                        for p in paraphrases:
+                                            if isinstance(p, str) and p.strip():
+                                                self.reverse_mappings[p.strip()] = chinese
                                     else:
                                         # 兼容旧格式
                                         category_mappings[chinese] = value
@@ -149,6 +153,20 @@ class PhraseMapping:
         print(f"DEBUG: 没有找到任何匹配")
         return None
 
+    @staticmethod
+    def _prefix_substring_is_whole_phrase(clean_phrase: str, clean_mapped: str) -> bool:
+        """若 clean_mapped 出现在 clean_phrase 开头，要求后面不能接更多英文步骤用语（避免
+        'fold shirt' 误匹配 'fold shirt into thirds.'）。"""
+        if not clean_phrase.startswith(clean_mapped):
+            return True
+        rest = clean_phrase[len(clean_mapped) :].lstrip()
+        if not rest:
+            return True
+        if rest[0] in ".,;:!?":
+            return True
+        # 仍以字母继续，说明 mapped 只是更长句子的前缀，不算同一步骤
+        return not rest[0].isalpha()
+
     def get_chinese_translation(self, english_phrase: str) -> Optional[str]:
         """
         获取英文短语的中文翻译（反向映射）
@@ -162,22 +180,35 @@ class PhraseMapping:
         # 首先尝试精确匹配
         if english_phrase in self.reverse_mappings:
             return self.reverse_mappings[english_phrase]
-        
-        # 如果精确匹配失败，尝试模糊匹配
-        # 移除句号进行匹配
+
         clean_phrase = english_phrase.rstrip('.')
         for mapped_english, chinese in self.reverse_mappings.items():
             clean_mapped = mapped_english.rstrip('.')
             if clean_phrase == clean_mapped:
                 return chinese
-        
-        # 如果还是找不到，尝试部分匹配
+
+        # 部分匹配：优先最长 mapped（更具体），且拒绝「短语前缀 + 后续仍有英文」的假阳性
+        best: Optional[Tuple[int, str]] = None
         for mapped_english, chinese in self.reverse_mappings.items():
             clean_mapped = mapped_english.rstrip('.')
-            if clean_phrase in clean_mapped or clean_mapped in clean_phrase:
-                return chinese
-        
-        return None
+            if clean_phrase in clean_mapped:
+                if not PhraseMapping._prefix_substring_is_whole_phrase(
+                    clean_mapped, clean_phrase
+                ):
+                    continue
+                score = len(clean_mapped)
+                if best is None or score > best[0]:
+                    best = (score, chinese)
+            elif clean_mapped in clean_phrase:
+                if not PhraseMapping._prefix_substring_is_whole_phrase(
+                    clean_phrase, clean_mapped
+                ):
+                    continue
+                score = len(clean_mapped)
+                if best is None or score > best[0]:
+                    best = (score, chinese)
+
+        return best[1] if best else None
 
     def get_category_mappings(self, category: str) -> Dict[str, str]:
         """

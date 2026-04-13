@@ -194,7 +194,7 @@ actions:
 
   随机叠T恤(带篮子):
     - 从篮子中取出T恤:
-        english: grab shirts from the basket.
+        english: grab shirt from the basket.
         paraphrases:
           - Pick up the shirts from the basket.
           - Take hold of the shirts from the basket.
@@ -206,7 +206,7 @@ actions:
             - Tuck the sleeves in.
             - Arrange the sleeves neatly.
     - 三折:
-          english: fold shirts into thirds.
+          english: fold shirt into thirds.
           paraphrases:
             - Fold the shirts into three parts.
             - Make three folds in the shirts.
@@ -218,7 +218,7 @@ actions:
             - Move the folded shirts to the upper right.
             - Set the folded shirts at the top right corner.
     - 拉平褶皱:
-          english: spread shirts flat.
+          english: spread shirt flat.
           paraphrases:
             - Smooth the shirts flat.
             - Lay the shirts flat.
