@@ -1,0 +1,38 @@
+{
+  "total_frames": 4828,
+  "annotations": [
+    {
+      "start_frame": 0,
+      "end_frame": 400,
+      "description": "grab shirt from the basket.",
+      "duration_frames": 400
+    },
+    {
+      "start_frame": 400,
+      "end_frame": 1200,
+      "description": "spread shirt flat.",
+      "duration_frames": 800
+    },
+    {
+      "start_frame": 1200,
+      "end_frame": 2539,
+      "description": "fold sleeves.",
+      "duration_frames": 1339
+    },
+    {
+      "start_frame": 2539,
+      "end_frame": 3393,
+      "description": "fold shirt into thirds.",
+      "duration_frames": 854
+    },
+    {
+      "start_frame": 3393,
+      "end_frame": 4828,
+      "description": "place folded shirt at top right.",
+      "duration_frames": 1435
+    }
+  ],
+  "annotation_field": "annotations",
+  "created_time": "周五 4月 10 16:13:10 2026",
+  "source_file": "/media/midea/Extreme SSD/cleanout/annotation/random_folding_shirts_basket_2folded_xdyna_zjx_20251203_compressed/collection_1764742078.hdf5"
+}

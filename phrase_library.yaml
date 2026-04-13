@@ -1,0 +1,494 @@
+# 系统键名映射
+system_keys:
+  annotation: 标注
+  language: 语言
+  segment: 区间
+
+# 短语库（用于短语选择）
+phrases:
+  叠衣服(篮子中取出):
+    - 从篮子中取出衣服
+    - 折叠裤子
+    - 折叠短袖
+    - 折叠长裤
+    - 折叠衬衫
+    - 折叠长裙
+    - 折叠短裙
+    - 放置裤子
+    - 放置短袖
+    - 放置长裤
+    - 放置衬衫
+    - 放置长裙
+    - 放置短裙
+
+  叠衣服:
+    - 折叠袖子
+    - 三折
+    - 放置
+
+  随机叠衣服:
+    - 拿过来
+    - 甩
+    - 旋转
+    - 拉平褶皱
+    - 折叠袖子
+    - 三折
+    - 放置
+
+  叠裤子:
+    - 折叠(1/2)
+    - 折叠(1/4)
+    - 放置
+
+  随机叠裤子:
+    - 拿过来
+    - 甩
+    - 旋转
+    - 拉平褶皱
+    - 折叠(1/2)
+    - 折叠(1/4)
+    - 放置
+  
+  随机叠T恤(带篮子):
+    - 从篮子中取出T恤
+    - 折叠袖子
+    - 三折
+    - 放置
+    - 拉平褶皱
+  
+  挂衬衫:
+    - 铺平衬衫
+    - 把衬衫挂到衣架上
+    - 把衣架挂到架子上
+  
+  随机叠毛巾:
+    - 叠毛巾
+    - 放置毛巾
+
+
+  冰箱项目流程:
+    - 将桌上食物放入筐中
+    - 移动至关闭的冰箱前并等待冰箱打开
+    - 靠近并撑开冰箱门
+    - 拉开右抽屉
+    - 水果入右抽屉
+    - 关闭右抽屉
+    - 拉开左抽屉
+    - 肉类入左抽屉
+    - 关闭左抽屉
+    - 往后移动，远离冰箱
+
+  洗衣机项目流程:
+    - 移动到洗衣机前
+    - 使用左臂打开洗衣机门
+    - 拿出洗衣机中衣服到衣服筐
+    - 移动到桌子前
+    - 从衣服筐中拿出衣服到桌子
+    - 叠衣服
+    - 将叠好的衣服推到右上角
+
+  保存结果:
+    - 保留
+    - 删除
+  控制模式:
+    - VR
+    - 推理
+  
+  玩具分类:
+    - 把面包放到盘子上
+    - 把玩具放到盒子里
+
+# 中英文映射（包含英文翻译和同义词）
+actions:
+
+  叠衣服(篮子中取出):
+    - 从篮子中取出衣服:
+        english: grab clothes from the basket.
+        paraphrases:
+          - Pick up the clothes from the basket.
+          - Take hold of the clothes from the basket.
+          - Grasp the clothes from the basket.
+    - 折叠裤子:
+        english: fold pants.
+        paraphrases:
+          - Lay the pants folded.
+          - Fold shorts.
+    - 折叠短袖:
+        english: fold shirt.
+        paraphrases:
+          - Lay the shirt folded.
+          - Arrange the shirt by folding it.
+          - Turn the shirt into a folded shape.
+    - 折叠长裤:
+        english: fold trousers.
+        paraphrases:
+          - Lay the trousers folded.
+    - 折叠衬衫:
+        english: fold blouse.
+        paraphrases:
+          - Lay the blouse folded.
+    - 折叠长裙:
+        english: fold dress.
+        paraphrases:
+          - Lay the dress folded.
+    - 折叠短裙:
+        english: fold skirt.
+        paraphrases:
+          - Lay the skirt folded.
+    - 放置裤子:
+        english: place folded pants at top right.
+        paraphrases:
+          - Put the folded pants in the top right.
+          - Move the folded pants to the upper right.
+          - Set the folded pants at the top right corner.
+    - 放置短袖:
+        english: place folded shirt at top right.
+        paraphrases:
+          - Put the folded shirt in the top right.
+          - Move the folded shirt to the upper right.
+          - Set the folded shirt at the top right corner.
+    - 放置长裤:
+        english: place folded trousers at top right.
+        paraphrases:
+          - Put the folded trousers in the top right.
+          - Move the folded trousers to the upper right.
+          - Set the folded trousers at the top right corner.
+    - 放置衬衫:
+        english: place folded blouse at top right.
+        paraphrases:
+          - Put the folded blouse in the top right.
+          - Move the folded blouse to the upper right.
+          - Set the folded blouse at the top right corner.
+    - 放置长裙:
+        english: place folded dress at top right.
+        paraphrases:
+          - Put the folded dress in the top right.
+          - Move the folded dress to the upper right.
+          - Set the folded dress at the top right corner.
+    - 放置短裙:
+        english: place folded skirt at top right.
+        paraphrases:
+          - Put the folded skirt in the top right.
+          - Move the folded skirt to the upper right.
+          - Set the folded skirt at the top right corner.
+          
+  叠衣服:
+    - 折叠袖子:
+        english: fold sleeves.
+        paraphrases:
+          - Fold the sleeves.
+          - Tuck the sleeves in.
+          - Arrange the sleeves neatly.
+    - 三折:
+        english: fold clothes into thirds.
+        paraphrases:
+          - Fold the clothes into three parts.
+          - Make three folds in the clothes.
+          - Divide the clothes into thirds and fold.
+    - 放置:
+        english: place folded clothes at top right.
+        paraphrases:
+          - Put the folded clothes in the top right.
+          - Move the folded clothes to the upper right.
+          - Set the folded clothes at the top right corner.
+
+  随机叠T恤(带篮子):
+    - 从篮子中取出T恤:
+        english: grab shirts from the basket.
+        paraphrases:
+          - Pick up the shirts from the basket.
+          - Take hold of the shirts from the basket.
+          - Grasp the shirts from the basket.
+    - 折叠袖子:
+          english: fold sleeves.
+          paraphrases:
+            - Fold the sleeves.
+            - Tuck the sleeves in.
+            - Arrange the sleeves neatly.
+    - 三折:
+          english: fold shirts into thirds.
+          paraphrases:
+            - Fold the shirts into three parts.
+            - Make three folds in the shirts.
+            - Divide the shirts into thirds and fold.
+    - 放置:
+          english: place folded shirts at top right.
+          paraphrases:
+            - Put the folded shirts in the top right.
+            - Move the folded shirts to the upper right.
+            - Set the folded shirts at the top right corner.
+    - 拉平褶皱:
+          english: spread shirts flat.
+          paraphrases:
+            - Smooth the shirts flat.
+            - Lay the shirts flat.
+            - Flatten the shirts.
+  
+  挂衬衫:
+    - 铺平衬衫:
+          english: flatten blouse.
+          paraphrases:
+            - spread blouse flat.
+            - Lay blouse flat.
+            - Smooth blouse flat.
+    - 把衬衫挂到衣架上:
+          english: hang blouse on hanger.
+          paraphrases:
+            - Place the blouse on a hanger.
+            - Put the blouse on a hanger.
+            - Hang the blouse up on a hanger.
+    - 把衣架挂到架子上:
+          english: hang hanger on rack.
+          paraphrases:
+            - hang hanger on rack.
+            - Put the hanger on the rack.
+            - Hang the hanger up on the rack.
+  
+  随机叠毛巾:
+    - 叠毛巾:
+          english: fold towel.
+          paraphrases:
+            - Tuck the towel neatly.
+            - Fold the towel up.
+            - Neatly arrange the towel by folding.
+    - 放置毛巾:
+          english: place folded towel at top right.
+          paraphrases:
+            - Put the folded towel in the top right.
+            - Move the folded towel to the upper right.
+            - Set the folded towel at the top right corner.
+
+  随机叠衣服:
+    - 拿过来:
+        english: grab clothes.
+        paraphrases:
+          - Pick up the clothes.
+          - Take hold of the clothes.
+          - Grasp the clothes.
+    - 甩:
+        english: lift clothes up and shake.
+        paraphrases:
+          - Shake the clothes after lifting.
+          - Raise and shake the clothes.
+          - Lift and shake the clothes.
+    - 旋转:
+        english: rotate clothes.
+        paraphrases:
+          - Turn the clothes around.
+          - Spin the clothes.
+          - Rotate the clothes gently.
+    - 拉平褶皱:
+        english: spread clothes flat.
+        paraphrases:
+          - Smooth the clothes flat.
+          - Lay the clothes flat.
+          - Flatten the clothes.
+    - 折叠袖子:
+        english: fold sleeves.
+        paraphrases:
+          - Fold the sleeves.
+          - Tuck the sleeves in.
+          - Arrange the sleeves neatly.
+    - 三折:
+        english: fold clothes into thirds.
+        paraphrases:
+          - Fold the clothes into three parts.
+          - Make three folds in the clothes.
+          - Divide the clothes into thirds and fold.
+    - 放置:
+        english: place folded clothes at top right.
+        paraphrases:
+          - Put the folded clothes in the top right.
+          - Move the folded clothes to the upper right.
+          - Set the folded clothes at the top right corner.
+
+  叠裤子:
+    - 折叠(1/2):
+        english: fold pants in half.
+        paraphrases:
+          - Fold the pants in half.
+          - Fold the pants once.
+          - Make one fold in the pants.
+    - 折叠(1/4):
+        english: fold pants to 1/4 size.
+        paraphrases:
+          - Fold the pants to a quarter size.
+          - Fold the pants to make them smaller.
+          - Make a fold to reach a quarter size.
+    - 放置:
+        english: place folded pants at top right.
+        paraphrases:
+          - Put the folded pants in the top right.
+          - Move the folded pants to the upper right.
+          - Set the folded pants at the top right corner.
+
+  随机叠裤子:
+    - 拿过来:
+        english: grab pants.
+        paraphrases:
+          - Pick up the pants.
+          - Take hold of the pants.
+          - Grasp the pants.
+    - 甩:
+        english: lift pants up and shake.
+        paraphrases:
+          - Shake the pants after lifting.
+          - Raise and shake the pants.
+          - Lift and shake the pants.
+    - 旋转:
+        english: rotate pants.
+        paraphrases:
+          - Turn the pants around.
+          - Spin the pants.
+          - Rotate the pants gently.
+    - 拉平褶皱:
+        english: spread pants flat.
+        paraphrases:
+          - Smooth the pants flat.
+          - Lay the pants flat.
+          - Flatten the pants.
+    - 折叠(1/2):
+        english: fold pants in half.
+        paraphrases:
+          - Fold the pants in half.
+          - Fold the pants once.
+          - Make one fold in the pants.
+    - 折叠(1/4):
+        english: fold pants to 1/4 size.
+        paraphrases:
+          - Fold the pants to a quarter size.
+          - Fold the pants to make them smaller.
+          - Make another fold to reach a quarter size.
+    - 放置:
+        english: place folded pants at top right.
+        paraphrases:
+          - Put the folded pants in the top right.
+          - Move the folded pants to the upper right.
+          - Set the folded pants at the top right corner.
+
+  洗衣机项目流程:
+    - 移动到洗衣机前:
+        english: move to the front of the washing machine.
+        paraphrases:
+          - Move to the front of the washing machine.
+          - Navigate to the front of the washing machine.
+          - Move toward the washing machine's front area.
+
+    - 使用左臂打开洗衣机门:
+        english: open washing machine door with left arm.
+        paraphrases:
+          - Use the left arm to pull open the washing machine door.
+          - Pull the washing machine door with the left arm.
+          - Activate the left arm to open the washing machine door.
+
+    - 拿出洗衣机中衣服到衣服筐:
+        english: transfer clothes from the washing machine to the basket.
+        paraphrases:
+          - Remove clothes from the washing machine and place them in the basket.
+          - Take clothes out of the washer and put them in the basket.
+          - Move clothing items from the washer to the basket.
+
+    - 移动到桌子前:
+        english: move to folding table.
+        paraphrases:
+          - Move to the folding table.
+          - Navigate to the folding table.
+          - Approach the folding table.
+
+    - 从衣服筐中拿出衣服到桌子:
+        english: transfer a piece of clothing from the basket to the folding table.
+        paraphrases:
+          - Move a garment from the basket to the folding table.
+          - Take a piece of clothing out of the basket and place it on the folding table.
+          - Move an article of clothing from the basket to the folding area.
+
+    - 叠衣服:
+        english: fold the piece of clothing.
+        paraphrases:
+          - Fold the garment neatly.
+          - Fold the clothing item properly.
+          - Arrange the piece of clothing in a folded manner.
+
+    - 将叠好的衣服推到右上角:
+        english: place folded clothes at top right.
+        paraphrases:
+          - Put the folded piece of clothing in the top right corner.
+          - Set the folded article of clothing at the top right corner.
+          - Position the folded garment in the top right area.
+
+  冰箱项目流程:
+    - 将桌上食物放入筐中:
+        english: place food on the table into basket.
+        paraphrases:
+          - Transfer the food on the table to the basket.
+          - Move the food into the basket.
+          - Put the food from the table into the basket.
+
+    - 移动至关闭的冰箱前并等待冰箱打开:
+        english: move to the front of the refrigerator and wait for the door to open.
+        paraphrases:
+          - Approach the closed refrigerator and pause until the door opens.
+          - Move toward the refrigerator and wait until the door has completely opened.
+          - Move to the front of the refrigerator and wait until the refrigerator door is fully open.
+
+    - 靠近并撑开冰箱门:
+        english: approach and expand refrigerator door opening.
+        paraphrases:
+          - Approach the refrigerator and open the door to its full position.
+          - Move to the refrigerator and open the door to the maximum angle.
+
+    - 拉开右抽屉:
+        english: open the right drawer.
+        paraphrases:
+          - Pull out right drawer.
+          - Slide the right drawer outward.
+
+    - 水果入右抽屉:
+        english: place the fruit into the right drawer.
+        paraphrases:
+          - Deposit the fruit into the right-side drawer.
+          - Place the fruit in the drawer located on the right.
+
+    - 关闭右抽屉:
+        english: close the right drawer.
+        paraphrases:
+          - Push right drawer closed.
+          - Shut right drawer.
+
+    - 拉开左抽屉:
+        english: open the left drawer.
+        paraphrases:
+          - Pull out left drawer.
+          - Slide the left drawer outward.
+
+    - 肉类入左抽屉:
+        english: place the meat into the left drawer.
+        paraphrases:
+          - Deposit the meat into the left-side drawer.
+          - Place the meat in the drawer located on the left.
+
+    - 关闭左抽屉:
+        english: close the left drawer.
+        paraphrases:
+          - Push left drawer closed.
+          - Shut left drawer.
+
+    - 往后移动，远离冰箱:
+        english: back away from the refrigerator.
+        paraphrases:
+          - Back away from fridge.
+          - Move away from the refrigerator.
+  
+  玩具分类:
+    - 把面包放到盘子上:
+        english: pick up the bread and place it on the plate.
+        paraphrases:
+          - Grab the bread and set it on the plate.
+          - Take the bread and put it on the plate.
+          - Pick the bread up and position it on the plate.
+    - 把玩具放到盒子里:
+        english: pick up the toy car and place it into the box.
+        paraphrases:
+          - Grab the toy car and put it in the box.
+          - Take the toy car and set it inside the box.
+          - Pick up the toy car and place it inside the box.

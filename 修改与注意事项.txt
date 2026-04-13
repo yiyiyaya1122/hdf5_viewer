@@ -1,0 +1,40 @@
+1. src/ui/main_window.py  save_annotations_as_json  --Saving to JSON (Open Interval)
+
+		 annotation_data_main = {
+                "start_frame": start,
+                "end_frame": end ,
+                "description": main_desc,
+                "duration_frames": end - start 
+            }
+            annotation_data_similar = {
+                "start_frame": start,
+                "end_frame": end,
+                "description": similar_desc,
+                "duration_frames": end - start 
+            }
+            
+            
+2. src/ui/timeline_widget.py  
+
+validate_time_windows  1. sorted_windows[-1][1] != self.total_frames 2. if current_end > next_start 3. if current_end != next_start
+
+find_next_available_start :  next_start = last_window[1] 
+add adjust_window_boundaries_smart to automatically make the right end of the previous interval follows the left start of the following interval
+
+3. src/ui/phrase_selection.py
+
+ def update_info_label(self):
+        """更新信息标签"""
+        duration = self.end_frame - self.start_frame  # open interval
+        self.info_label.setText(f"时间窗口: {self.start_frame}-{self.end_frame} 帧 (共 {duration} 帧)")
+
+    def update_duration_label(self):
+        """更新持续时间标签"""
+        duration = self.end_frame - self.start_frame  # open interval
+        self.duration_label.setText(f"{duration} 帧"
+
+
+注意事项：调整区间的时候请调整第二个（右边）区间的左端点（默认只用resize_left), 可以来回调整
+        
+        
+
