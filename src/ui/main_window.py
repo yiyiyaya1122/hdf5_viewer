@@ -867,12 +867,12 @@ class MainWindow(QMainWindow):
                 self.data_list_widget.addItem(key)
             # 确保列表是启用状态
             self.data_list_widget.setEnabled(True)
-            print(f"找到 {len(annotation_keys)} 个适合标注的字段")
+            # print(f"找到 {len(annotation_keys)} 个适合标注的字段")
         else:
             # 如果没有适合的字段，显示提示
             self.data_list_widget.addItem("没有找到适合标注的字段")
             self.data_list_widget.setEnabled(False)
-            print("警告：没有找到适合标注的字段")
+            # print("警告：没有找到适合标注的字段")
 
         # 更新时间轴帧数
         frame_count = self.hdf5_model.get_frame_count()
@@ -1850,9 +1850,9 @@ class MainWindow(QMainWindow):
                         self.current_annotation_field = loaded_field
                         self.current_field_label.setText(f"当前字段: {loaded_field}")
                         # 清除按钮现在在TimelineWidget中，会自动更新状态
-                        print(f"已设置当前标注字段为: {loaded_field}")
+                        # print(f"已设置当前标注字段为: {loaded_field}")
 
-                print(f"从 {file_path} 加载了 {len(self.timeline_widget.time_windows)} 个时间窗口")
+                # print(f"从 {file_path} 加载了 {len(self.timeline_widget.time_windows)} 个时间窗口")
 
                 # 更新时间轴显示
                 self.timeline_widget.update()
@@ -2013,9 +2013,9 @@ class MainWindow(QMainWindow):
                     # 启用相关按钮
                     self.load_field_button.setEnabled(True)
                     self.delete_field_button.setEnabled(True)
-                    print(f"已设置当前标注字段为: {loaded_field}")
+                    # print(f"已设置当前标注字段为: {loaded_field}")
 
-            print(f"从 {file_path} 加载了 {len(self.timeline_widget.time_windows)} 个时间窗口")
+            # print(f"从 {file_path} 加载了 {len(self.timeline_widget.time_windows)} 个时间窗口")
 
             # 更新时间轴显示
             self.timeline_widget.update()
@@ -2067,15 +2067,15 @@ class MainWindow(QMainWindow):
             if "sub_action" in hdf5_data:
                 annotations_data = hdf5_data["sub_action"]
                 annotation_field = "sub_action"
-                print(f"找到sub_action字段，包含 {len(annotations_data)} 个标注")
+                # print(f"找到sub_action字段，包含 {len(annotations_data)} 个标注")
             elif "sub_reason" in hdf5_data:
                 annotations_data = hdf5_data["sub_reason"]
                 annotation_field = "sub_reason"
-                print(f"找到sub_reason字段，包含 {len(annotations_data)} 个标注")
+                # print(f"找到sub_reason字段，包含 {len(annotations_data)} 个标注")
             elif "actions" in hdf5_data:
                 annotations_data = hdf5_data["actions"]
                 annotation_field = "actions"
-                print(f"找到sub_reason字段，包含 {len(annotations_data)} 个标注")    
+                # print(f"找到actions字段，包含 {len(annotations_data)} 个标注")
             else:
                 print(f"HDF5文件 '{hdf5_file_name}' 的数据中未找到sub_action或sub_reason或action字段")
                 return False
@@ -2140,9 +2140,9 @@ class MainWindow(QMainWindow):
                 # 显示并启用文件夹JSON更新按钮
                 self.update_folder_json_btn.setVisible(True)
                 self.update_folder_json_btn.setEnabled(True)
-                print(f"已设置当前标注字段为: {target_field} (从JSON字段 {annotation_field} 加载)")
+                # print(f"已设置当前标注字段为: {target_field} (从JSON字段 {annotation_field} 加载)")
 
-            print(f"从 {json_file_path} 为HDF5文件 '{hdf5_file_name}' 加载了 {len(self.timeline_widget.time_windows)} 个时间窗口")
+            # print(f"从 {json_file_path} 为HDF5文件 '{hdf5_file_name}' 加载了 {len(self.timeline_widget.time_windows)} 个时间窗口")
 
             # 更新时间轴显示
             self.timeline_widget.update()

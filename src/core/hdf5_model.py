@@ -479,9 +479,10 @@ class HDF5Model:
                         h5py.check_string_dtype(dtype) is not None or  # 可变长度字符串
                         'string' in str(dtype).lower()):  # 其他字符串类型
                         compatible_keys.append(key)
-                        print(f"字段 '{key}' 适合保存标注 (类型: {dtype})")
+                        # print(f"字段 '{key}' 适合保存标注 (类型: {dtype})")
                     else:
-                        print(f"字段 '{key}' 不适合保存标注 (类型: {dtype})")
+                        # print(f"字段 '{key}' 不适合保存标注 (类型: {dtype})")
+                        pass
 
             except Exception as e:
                 print(f"检查字段 '{key}' 时出错: {e}")
