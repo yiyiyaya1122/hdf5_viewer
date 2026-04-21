@@ -2628,13 +2628,13 @@ class TimelineWidget(QWidget):
 
         # 只有在帧实际变化时才发出信号
         if prev_frame != self.current_frame:
-            print(f"发出帧变化信号: {self.current_frame}")
+            # print(f"发出帧变化信号: {self.current_frame}")
             # 发出帧变化信号
             self.frameChanged.emit(self.current_frame)
         else:
             print("帧未变化，不发送信号")
 
-        print("*** TimelineWidget.set_current_frame完成 ***\n")
+        # print("*** TimelineWidget.set_current_frame完成 ***\n")
 
     def update_frame_label(self):
         """更新帧标签"""

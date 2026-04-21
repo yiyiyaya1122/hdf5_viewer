@@ -24,7 +24,9 @@ class HDF5Model:
         self.languages = {}
         self.compressed = False
         self.compress_len = None
-        
+        # images_dict/<cam>/rgb 一维拼接缓冲区的元数据缓存: base路径 -> {lens, offsets, hw}
+        self._images_dict_meta: Dict[str, Any] = {}
+
         # 打开文件并初始化
         self._open_file()
         self._initialize()
@@ -78,7 +80,34 @@ class HDF5Model:
                         break
         except Exception as e:
             print(f"从图像组获取帧数时出错: {e}")
-        
+
+        # images_dict/<cam>/(rgb + rgb_size + rgb_timestamp) 结构
+        try:
+            if self.frame_count == 0 and "images_dict" in self.file:
+                ig = self.file["images_dict"]
+                for cam_name in sorted(ig.keys()):
+                    g = ig[cam_name]
+                    if not isinstance(g, h5py.Group):
+                        continue
+                    if "rgb_timestamp" in g:
+                        ts = g["rgb_timestamp"]
+                        if isinstance(ts, h5py.Dataset) and len(ts.shape) > 0 and ts.shape[0] > 0:
+                            self.frame_count = int(ts.shape[0])
+                            print(
+                                f"从 images_dict/{cam_name}/rgb_timestamp 获取帧数: {self.frame_count}"
+                            )
+                            break
+                    if self.frame_count == 0 and "rgb_size" in g:
+                        rs = g["rgb_size"]
+                        if isinstance(rs, h5py.Dataset) and len(rs.shape) > 0 and rs.shape[0] > 0:
+                            self.frame_count = int(rs.shape[0])
+                            print(
+                                f"从 images_dict/{cam_name}/rgb_size 获取帧数: {self.frame_count}"
+                            )
+                            break
+        except Exception as e:
+            print(f"从 images_dict 获取帧数时出错: {e}")
+
         # 如果没有从图像获取到帧数，从其他数据集获取
         if self.frame_count == 0:
             for key in self.file.keys():
@@ -120,7 +149,131 @@ class HDF5Model:
                     self.data_keys.append(name)
 
         self.file.visititems(visit_item)
-    
+
+        # 一维 images_dict/*/rgb 需要在已知帧数后校验/修正元数据
+        self._refresh_images_dict_meta()
+
+    def _refresh_images_dict_meta(self):
+        """为每个 images_dict 相机组预计算 rgb 切片长度与偏移（若可解析）。"""
+        self._images_dict_meta.clear()
+        for key in self.image_keys:
+            if not key.startswith("images_dict/") or not key.endswith("/rgb"):
+                continue
+            base = key[: -len("/rgb")]
+            if base in self._images_dict_meta:
+                continue
+            meta = self._build_images_dict_meta(base)
+            if meta is not None:
+                self._images_dict_meta[base] = meta
+
+    def _build_images_dict_meta(self, base: str) -> Optional[Dict[str, Any]]:
+        """
+        解析 images_dict/<cam> 下扁平 rgb 与 rgb_size，生成每帧字节长度与偏移。
+
+        rgb_size 支持:
+        - (N,) 或 (N,1): 每帧压缩字节数（如 JPEG）
+        - (N,2): 若为 H,W 且 sum(H*W*3)==len(rgb)，视为原始 RGB；否则取第一列为每帧字节数
+        """
+        try:
+            grp = self.file[base]
+            if not isinstance(grp, h5py.Group) or "rgb" not in grp or "rgb_size" not in grp:
+                return None
+            rgb_ds = grp["rgb"]
+            if not isinstance(rgb_ds, h5py.Dataset) or len(rgb_ds.shape) != 1:
+                return None
+            total = int(rgb_ds.shape[0])
+            rs = np.asarray(grp["rgb_size"][:])
+            lens: Optional[np.ndarray] = None
+            hw: Optional[np.ndarray] = None
+
+            if rs.ndim == 1:
+                lens = np.maximum(0, np.round(rs).astype(np.int64))
+            elif rs.ndim == 2:
+                if rs.shape[1] == 1:
+                    lens = np.maximum(0, np.round(rs[:, 0]).astype(np.int64))
+                elif rs.shape[1] >= 2:
+                    h = np.maximum(0, np.round(rs[:, 0]).astype(np.int64))
+                    w = np.maximum(0, np.round(rs[:, 1]).astype(np.int64))
+                    cand = h * w * 3
+                    if int(cand.sum()) == total:
+                        lens = cand
+                        hw = np.stack([h, w], axis=1)
+                    else:
+                        h2 = np.maximum(0, np.round(rs[:, 1]).astype(np.int64))
+                        w2 = np.maximum(0, np.round(rs[:, 0]).astype(np.int64))
+                        cand2 = h2 * w2 * 3
+                        if int(cand2.sum()) == total:
+                            lens = cand2
+                            hw = np.stack([h2, w2], axis=1)
+                        else:
+                            lens = np.maximum(0, np.round(rs[:, 0]).astype(np.int64))
+
+            if lens is None or lens.size == 0:
+                return None
+
+            s = int(lens.sum())
+            if s < total:
+                lens = lens.copy()
+                lens[-1] = lens[-1] + (total - s)
+                print(
+                    f"提示: {base} rgb 总长与 rgb_size 求和相差 {total - s} 字节，已归入最后一帧"
+                )
+            elif s > total:
+                print(
+                    f"警告: {base} rgb 总长 {total} 小于 rgb_size 推算 {s}，解码可能失败"
+                )
+
+            offsets = np.concatenate([[0], np.cumsum(lens[:-1], dtype=np.int64)])
+            return {"lens": lens, "offsets": offsets, "hw": hw}
+        except Exception as e:
+            print(f"构建 images_dict 元数据失败 {base}: {e}")
+            return None
+
+    def _decode_images_dict_buffer(
+        self, buf: np.ndarray, hw_row: Optional[np.ndarray]
+    ) -> Optional[np.ndarray]:
+        """优先 JPEG 解码，失败则按 hw 尝试原始 RGB(H,W,3)。"""
+        if buf is None or buf.size == 0:
+            return None
+        buf = np.asarray(buf).reshape(-1)
+        j = cv2.imdecode(buf, cv2.IMREAD_COLOR)
+        if j is not None:
+            return cv2.cvtColor(j, cv2.COLOR_BGR2RGB)
+        if hw_row is not None and hw_row.size >= 2:
+            h, w = int(hw_row[0]), int(hw_row[1])
+            for hh, ww in ((h, w), (w, h)):
+                if hh > 0 and ww > 0 and hh * ww * 3 == buf.size:
+                    return buf.reshape(hh, ww, 3)
+        return None
+
+    def _get_images_dict_frame_image(self, rgb_key: str, frame_idx: int) -> Optional[np.ndarray]:
+        base = rgb_key[: -len("/rgb")]
+        if base not in self._images_dict_meta:
+            meta = self._build_images_dict_meta(base)
+            if meta is None:
+                return None
+            self._images_dict_meta[base] = meta
+        meta = self._images_dict_meta[base]
+        lens = meta["lens"]
+        offsets = meta["offsets"]
+        hw = meta.get("hw")
+        if frame_idx < 0 or frame_idx >= len(lens):
+            return None
+        grp = self.file[base]
+        rgb_ds = grp["rgb"]
+        start = int(offsets[frame_idx])
+        ln = int(lens[frame_idx])
+        end = start + ln
+        if end > rgb_ds.shape[0]:
+            print(f"警告: {rgb_key} 帧 {frame_idx} 切片越界")
+            return None
+        buf = np.asarray(rgb_ds[start:end])
+        hw_row = hw[frame_idx] if hw is not None and frame_idx < len(hw) else None
+        return self._decode_images_dict_buffer(buf, hw_row)
+
+    def _is_images_dict_flat_rgb_key(self, key: str) -> bool:
+        return key.startswith("images_dict/") and key.endswith("/rgb")
+
     def _is_image_dataset(self, dataset):
         """
         判断数据集是否为图像
@@ -133,6 +286,18 @@ class HDF5Model:
         """
         # 检查数据集名称路径，看是否在 images 目录下
         dataset_name = dataset.name
+        # images_dict/<cam>/rgb：一维 uint8 拼接多帧（配合 rgb_size / rgb_timestamp）
+        name = dataset_name.strip("/")
+        parts = name.split("/")
+        if (
+            len(parts) >= 3
+            and parts[0] == "images_dict"
+            and parts[-1] == "rgb"
+            and dataset.dtype == np.uint8
+            and len(dataset.shape) == 1
+        ):
+            return True
+
         if '/images/' in dataset_name:
             # 如果在images目录下，进一步检查数据类型和维度
             if dataset.dtype == np.uint8:
@@ -330,8 +495,11 @@ class HDF5Model:
         """
         if key not in self.image_keys or not (0 <= frame_idx < self.frame_count):
             return None
-        
-        # 获取原始图像数据
+
+        if self._is_images_dict_flat_rgb_key(key):
+            return self._get_images_dict_frame_image(key, frame_idx)
+
+        # 获取原始图像数据（每帧一行：JPEG 等压缩格式）
         raw_image_data = self.file[key][frame_idx]
         return cv2.imdecode(raw_image_data, cv2.IMREAD_COLOR)
 
