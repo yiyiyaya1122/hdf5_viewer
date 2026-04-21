@@ -2626,13 +2626,7 @@ class TimelineWidget(QWidget):
 
         # 只有在帧实际变化时才发出信号
         if prev_frame != self.current_frame:
-            print(f"发出帧变化信号: {self.current_frame}")
-            # 发出帧变化信号
             self.frameChanged.emit(self.current_frame)
-        else:
-            print("帧未变化，不发送信号")
-
-        print("*** TimelineWidget.set_current_frame完成 ***\n")
 
     def update_frame_label(self):
         """更新帧标签"""
@@ -2642,24 +2636,8 @@ class TimelineWidget(QWidget):
 
     def on_slider_value_changed(self, value: int):
         """处理滑块值变化"""
-        print(f"\n@@@ 滑块值变化: {value} @@@")
-
-        # 保存当前帧用于对比
-        old_frame = self.current_frame
-
-        # 设置当前帧
         self.set_current_frame(value)
-
-        # 检查帧是否实际更新
-        if old_frame != self.current_frame:
-            print(f"帧已更新: {old_frame} -> {self.current_frame}")
-        else:
-            print(f"帧未变化: 仍为 {self.current_frame}")
-
-        # 无论是否帧已经变化，都强制发送信号
-        print(f"强制发送帧变化信号: {value}")
         self.frameChanged.emit(value)
-        print("@@@ 滑块值变化处理完成 @@@\n")
 
     def toggle_play(self):
         """切换播放状态"""

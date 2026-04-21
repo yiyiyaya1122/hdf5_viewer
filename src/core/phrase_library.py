@@ -67,7 +67,7 @@ class PhraseMapping:
                             self.paraphrase_mappings = {}
                         self.paraphrase_mappings[category] = category_paraphrases
 
-                print(f"成功加载短语映射，共 {len(self.mappings)} 个分类，{len(self.reverse_mappings)} 个反向映射")
+                # print(f"成功加载短语映射，共 {len(self.mappings)} 个分类，{len(self.reverse_mappings)} 个反向映射")
             else:
                 print(f"短语映射文件不存在: {self.mapping_path}")
                 self.mappings = {}
