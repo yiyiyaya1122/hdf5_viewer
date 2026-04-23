@@ -21,8 +21,8 @@ def test_new_phrases():
     print(f"   分类数量: {len(categories)}")
     print(f"   所有分类: {categories}")
     
-    # 检查新添加的分类
-    new_categories = ["冰箱项目流程", "洗衣机项目流程"]
+    # 短语库当前仅保留：冰箱、烤箱、洗碗机
+    new_categories = ["冰箱", "烤箱", "洗碗机"]
     for category in new_categories:
         if category in categories:
             phrases = phrase_library.get_phrases_by_category(category)
@@ -54,10 +54,10 @@ def test_new_phrases():
     # 测试具体的英文翻译
     print("\n3. 测试具体短语的英文翻译:")
     test_phrases = [
-        ("冰箱项目流程", "将桌上食物放入筐中"),
-        ("洗衣机项目流程", "移动到洗衣机前"),
-        ("冰箱项目流程", "拉开右抽屉"),
-        ("洗衣机项目流程", "叠衣服")
+        ("冰箱", "打开冰箱门"),
+        ("烤箱", "将食物放入烤箱"),
+        ("洗碗机", "将餐具放入洗碗机"),
+        ("冰箱", "关上冰箱门"),
     ]
     
     for category, phrase in test_phrases:
