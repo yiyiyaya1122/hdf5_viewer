@@ -331,84 +331,92 @@ class HDF5Model:
             if key in self.file:
                 self._load_language_for_key(key)
     
+    def _decode_text_value(self, task_value) -> str:
+        """把 HDF5 中的字符串值转成普通文本。"""
+        if isinstance(task_value, bytes):
+            task = task_value.decode("utf-8", errors="replace")
+        elif isinstance(task_value, str):
+            task = task_value
+        elif isinstance(task_value, (int, float, np.integer, np.floating)):
+            task = str(task_value)
+        else:
+            task = str(task_value)
+
+        task = task.strip().strip("\x00")
+        if (task.startswith("b'") and task.endswith("'")) or (
+            task.startswith('b"') and task.endswith('"')
+        ):
+            task = task[2:-1]
+        return task
+
+    def _frame_text_at(self, language_data, index: int) -> str:
+        """读取某一帧的文本。标量数据集没有逐帧值。"""
+        shape = language_data.shape
+        if len(shape) == 0:
+            raise IndexError("scalar dataset has no per-frame values")
+        if index >= shape[0]:
+            return ""
+        if len(shape) == 1:
+            task_value = language_data[index]
+        elif shape[1] > 0:
+            task_value = language_data[index, 0]
+        else:
+            return ""
+        return self._decode_text_value(task_value)
+
+    def _collect_language_segments(self, key: str, language_data) -> Dict[Tuple[int, int], str]:
+        """
+        从逐帧字符串数据集归并出连续标注段。
+
+        shape 为 () 的字段是整段元数据（例如 stage_prompts 的阶段词典），
+        不能按帧下标读取。
+        """
+        print(f"加载{key}数据集，形状: {language_data.shape}, 类型: {language_data.dtype}")
+        if len(language_data.shape) == 0:
+            text = ""
+            try:
+                text = self._decode_text_value(language_data[()])
+            except Exception as e:
+                print(f"读取标量字段 {key} 失败: {e}")
+            print(f"跳过标量字段 '{key}'：这是整段元数据，不是逐帧标注。内容: {text}")
+            return {}
+
+        key_languages = {}
+        current_task = None
+        start_idx = None
+
+        for i in range(self.frame_count):
+            try:
+                task = self._frame_text_at(language_data, i)
+            except Exception as e:
+                print(f"解码帧 {i} 的{key}时出错: {e}")
+                task = ""
+
+            if task and task != "0" and task != 0:  # 忽略空值和0值
+                if current_task is None or task != current_task:
+                    if current_task is not None and start_idx is not None:
+                        key_languages[(start_idx, i - 1)] = current_task
+                    current_task = task
+                    start_idx = i
+            elif current_task is not None:
+                if start_idx is not None:
+                    key_languages[(start_idx, i - 1)] = current_task
+                current_task = None
+                start_idx = None
+
+        if current_task is not None and start_idx is not None:
+            key_languages[(start_idx, self.frame_count - 1)] = current_task
+
+        print(f"加载了 {len(key_languages)} 个{key}段")
+        for (start, end), desc in key_languages.items():
+            print(f"{key}段: {start}-{end}, 描述: '{desc}'")
+        return key_languages
+
     def _load_language_for_key(self, key: str):
         """为指定键加载language数据"""
-        key_languages = {}
-        
         try:
             language_data = self.file[key]
-            print(f"加载{key}数据集，形状: {language_data.shape}, 类型: {language_data.dtype}")
-            
-            # 遍历所有帧，标记已有的language
-            current_task = None
-            start_idx = None
-            
-            for i in range(self.frame_count):
-                # 处理编码，确保可以正确处理中文
-                try:
-                    if i < language_data.shape[0] and (len(language_data.shape) == 1 or language_data.shape[1] > 0):
-                        # 尝试直接获取字符串
-                        if len(language_data.shape) == 1:
-                            # 一维数组
-                            task_value = language_data[i]
-                        else:
-                            # 二维数组
-                            task_value = language_data[i, 0]
-                        
-                        # 处理可能的字节对象
-                        if isinstance(task_value, bytes):
-                            task = task_value.decode('utf-8', errors='replace')
-                        elif isinstance(task_value, str):
-                            task = task_value
-                        elif isinstance(task_value, (int, float)):
-                            task = str(task_value)
-                        else:
-                            task = str(task_value)
-                        
-                        # 去除前后空白
-                        task = task.strip()
-                        
-                        # 处理特殊格式，如果显示为 b'...'
-                        if task.startswith("b'") and task.endswith("'"):
-                            try:
-                                task = task[2:-1]
-                            except:
-                                pass
-                    else:
-                        task = ""
-                except Exception as e:
-                    print(f"解码帧 {i} 的{key}时出错: {e}")
-                    task = ""
-                
-                if task and task != "0" and task != 0:  # 忽略空值和0值
-                    if current_task is None or task != current_task:
-                        # 新任务开始或任务变更
-                        if current_task is not None and start_idx is not None:
-                            # 保存上一个任务
-                            key_languages[(start_idx, i - 1)] = current_task
-                        
-                        current_task = task
-                        start_idx = i
-                    # 若任务未变更，继续追踪当前任务，无需操作
-                elif current_task is not None:
-                    # 任务结束
-                    if start_idx is not None:
-                        key_languages[(start_idx, i - 1)] = current_task
-                    current_task = None
-                    start_idx = None
-            
-            # 保存最后一个任务
-            if current_task is not None and start_idx is not None:
-                key_languages[(start_idx, self.frame_count - 1)] = current_task
-            
-            # 保存到缓存
-            self.languages[key] = key_languages
-            
-            # 打印加载的language信息
-            print(f"加载了 {len(key_languages)} 个{key}段")
-            for (start, end), desc in key_languages.items():
-                print(f"{key}段: {start}-{end}, 描述: '{desc}'")
-                
+            self.languages[key] = self._collect_language_segments(key, language_data)
         except Exception as e:
             print(f"加载{key}数据时出错: {e}")
             self.languages[key] = {}
@@ -475,6 +483,9 @@ class HDF5Model:
                     dtype = dataset.dtype
 
                     # 检查是否是字符串类型或可变长度字符串
+                    # 标量（shape 为 ()）是文件级元数据，不能按帧写入标注
+                    if len(dataset.shape) == 0:
+                        continue
                     if (dtype.kind in ['S', 'U'] or  # 固定长度字符串或Unicode字符串
                         h5py.check_string_dtype(dtype) is not None or  # 可变长度字符串
                         'string' in str(dtype).lower()):  # 其他字符串类型
@@ -489,6 +500,21 @@ class HDF5Model:
 
         return compatible_keys
     
+    def _is_raw_pixel_frame(self, arr: np.ndarray) -> bool:
+        """判断一帧是像素矩阵还是压缩字节流。"""
+        if arr.ndim == 3 and arr.shape[0] > 1 and arr.shape[1] > 1 and arr.shape[-1] in (1, 3, 4):
+            return True
+        if arr.ndim == 2 and arr.shape[0] > 1 and arr.shape[1] > 1:
+            return True
+        return False
+
+    def _raw_frame_to_display(self, arr: np.ndarray) -> np.ndarray:
+        """把原始像素整理成界面使用的 RGB 图像。"""
+        image = arr
+        if image.ndim == 2 or image.shape[-1] == 1:
+            image = np.repeat(image.reshape(image.shape[0], image.shape[1], -1), 3, axis=-1)
+        return np.ascontiguousarray(image)
+
     def get_image(self, key: str, frame_idx: int) -> np.ndarray:
         """
         获取指定帧的图像，自动处理压缩和非压缩的情况
@@ -506,8 +532,18 @@ class HDF5Model:
         if self._is_images_dict_flat_rgb_key(key):
             return self._get_images_dict_frame_image(key, frame_idx)
 
-        raw_image_data = self.file[key][frame_idx]
-        return cv2.imdecode(raw_image_data, cv2.IMREAD_COLOR)
+        raw_image_data = np.asarray(self.file[key][frame_idx])
+        if self._is_raw_pixel_frame(raw_image_data):
+            return self._raw_frame_to_display(raw_image_data)
+
+        encoded = np.ascontiguousarray(raw_image_data).reshape(-1)
+        if encoded.size == 0:
+            return None
+        try:
+            return cv2.imdecode(encoded, cv2.IMREAD_COLOR)
+        except cv2.error as e:
+            print(f"解码图像 {key} 帧 {frame_idx} 失败: {e}")
+            return None
 
         # 如果不是压缩数据集，直接返回
         #if not self.compressed:
@@ -953,6 +989,10 @@ class HDF5Model:
             dataset = self.file[key]
             if isinstance(dataset, h5py.Dataset):
                 print(f"检查键 '{key}': 形状={dataset.shape}, 数据类型={dataset.dtype}")
+                # 标量字符串是整段元数据，例如 stage_prompts，不能按帧解码
+                if len(dataset.shape) == 0:
+                    print(f"跳过标量键 '{key}'")
+                    continue
                 # 检查是否是字符串类型的数据集
                 if (dataset.dtype.kind in ['S', 'U', 'O'] or  # 字节字符串、Unicode字符串、对象
                     h5py.check_string_dtype(dataset.dtype) is not None):
@@ -1174,78 +1214,8 @@ class HDF5Model:
         
         try:
             language_data = self.file[key]
-            print(f"加载{key}数据集，形状: {language_data.shape}, 类型: {language_data.dtype}")
-            
-            # 遍历所有帧，标记已有的language
-            current_task = None
-            start_idx = None
-            
-            for i in range(self.frame_count):
-                # 处理编码，确保可以正确处理中文
-                try:
-                    if i < language_data.shape[0]:
-                        # 尝试直接获取字符串
-                        if len(language_data.shape) == 1:
-                            # 一维数组
-                            task_value = language_data[i]
-                        else:
-                            # 二维数组
-                            task_value = language_data[i, 0] if language_data.shape[1] > 0 else ""
-                        
-                        # 处理可能的字节对象
-                        if isinstance(task_value, bytes):
-                            task = task_value.decode('utf-8', errors='replace')
-                        elif isinstance(task_value, str):
-                            task = task_value
-                        elif isinstance(task_value, (int, float)):
-                            task = str(task_value)
-                        else:
-                            task = str(task_value)
-                        
-                        # 去除前后空白
-                        task = task.strip()
-                        
-                        # 处理特殊格式，如果显示为 b'...'
-                        if task.startswith("b'") and task.endswith("'"):
-                            try:
-                                task = task[2:-1]
-                            except:
-                                pass
-                    else:
-                        task = ""
-                except Exception as e:
-                    print(f"解码帧 {i} 的{key}时出错: {e}")
-                    task = ""
-                
-                if task and task != "0" and task != 0:  # 忽略空值和0值
-                    if current_task is None or task != current_task:
-                        # 新任务开始或任务变更
-                        if current_task is not None and start_idx is not None:
-                            # 保存上一个任务
-                            languages[(start_idx, i - 1)] = current_task
-                        
-                        current_task = task
-                        start_idx = i
-                    # 若任务未变更，继续追踪当前任务，无需操作
-                elif current_task is not None:
-                    # 任务结束
-                    if start_idx is not None:
-                        languages[(start_idx, i - 1)] = current_task
-                    current_task = None
-                    start_idx = None
-            
-            # 保存最后一个任务
-            if current_task is not None and start_idx is not None:
-                languages[(start_idx, self.frame_count - 1)] = current_task
-                
-            # 打印加载的language信息
-            print(f"加载了 {len(languages)} 个{key}段")
-            for (start, end), desc in languages.items():
-                print(f"{key}段: {start}-{end}, 描述: '{desc}'")
-            
-            # 将加载的数据缓存起来
+            languages = self._collect_language_segments(key, language_data)
             self.languages[key] = languages
-                
         except Exception as e:
             print(f"加载{key}数据时出错: {e}")
         
